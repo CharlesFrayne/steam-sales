@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
+use std::env;
 
-const KEY: &str = panic!("Get your API key at https://steamcommunity.com/login/home/?goto=%2Fdev%2Fapikey");
-const STEAMID: &str = panic!("Get your user ID by following https://help.steampowered.com/en/faqs/view/2816-BE67-5B69-0FEC");
 const BASE_URL: &str = "https://api.steampowered.com/";
 const OWNED: &str = "IPlayerService/GetOwnedGames/v1";
 const INFO: &str = "https://store.steampowered.com/api/appdetails";
@@ -32,13 +31,16 @@ struct PriceOverview {
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
-    let library_body = request_library().await.unwrap();
+    let args: Vec<String> = env::args().collect();
+    let api_key = &args[0];
+    let steam_id = &args[1];
+    let library_body = request_library(api_key, steam_id).await.unwrap();
     let library: LibraryResponse = serde_json::from_str(library_body.as_str()).unwrap();
 
     let mut played_games = library.response.games;
     played_games.retain(|g| g.playtime_forever > 0);
 
-    let prices_body = request_prices(&played_games)
+    let prices_body = request_prices(api_key, &played_games)
         .await
         .expect("couldn't even get a price response");
     let mut prices_json: serde_json::Value =
@@ -73,9 +75,9 @@ async fn main() -> Result<(), String> {
     Ok(())
 }
 
-async fn request_library() -> Result<String, reqwest::Error> {
-    let key_param = ("key", KEY);
-    let id_param = ("steamid", STEAMID);
+async fn request_library(api_key: &str, steam_id: &str) -> Result<String, reqwest::Error> {
+    let key_param = ("key", api_key);
+    let id_param = ("steamid", steam_id);
     let info_param = ("include_appinfo", "true");
     let client = reqwest::Client::new();
     let resp = client
@@ -87,8 +89,8 @@ async fn request_library() -> Result<String, reqwest::Error> {
     Ok(body)
 }
 
-async fn request_prices(games: &Vec<Game>) -> Result<String, reqwest::Error> {
-    let key_param = ("key", KEY);
+async fn request_prices(api_key: &str, games: &Vec<Game>) -> Result<String, reqwest::Error> {
+    let key_param = ("key", api_key);
     let appids_csv = games
         .iter()
         .map(|g| g.appid.to_string())
