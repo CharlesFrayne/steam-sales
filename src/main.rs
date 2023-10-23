@@ -32,8 +32,8 @@ struct PriceOverview {
 #[tokio::main]
 async fn main() -> Result<(), String> {
     let args: Vec<String> = env::args().collect();
-    let api_key = &args[0];
-    let steam_id = &args[1];
+    let api_key = &args[1];
+    let steam_id = &args[2];
     let library_body = request_library(api_key, steam_id).await.unwrap();
     let library: LibraryResponse = serde_json::from_str(library_body.as_str()).unwrap();
 
